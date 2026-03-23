@@ -12,9 +12,11 @@ const muted = '#94A3B8';
 
 const navItems = [
   { href: '/dashboard', icon: '🏠', label: 'Dashboard' },
-  { href: '/posts', icon: '📝', label: 'Posts' },
+  { href: '/posts', icon: '📝', label: 'Create Post' },
+  { href: '/generate', icon: '✨', label: 'AI Generator' },
   { href: '/comments', icon: '💬', label: 'Comments' },
   { href: '/schedule', icon: '📅', label: 'Schedule' },
+  { href: '/analytics', icon: '📊', label: 'Analytics' },
   { href: '/accounts', icon: '🔗', label: 'Accounts' },
   { href: '/settings', icon: '⚙️', label: 'Settings' },
 ];
@@ -55,6 +57,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 <span>{item.icon}</span>
                 <span>{item.label}</span>
+                {item.href === '/generate' && (
+                  <span style={{ marginLeft: 'auto', background: 'rgba(16,185,129,0.2)', color: accent, fontSize: '0.65rem', fontWeight: 700, padding: '2px 6px', borderRadius: '4px' }}>NEW</span>
+                )}
               </Link>
             );
           })}
