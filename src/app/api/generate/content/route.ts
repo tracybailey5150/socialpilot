@@ -34,8 +34,8 @@ Make each variation distinct. Include 3-5 relevant hashtags per post. Return onl
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('OpenAI error:', err);
-      return NextResponse.json({ error: 'OpenAI API error' }, { status: 500 });
+      console.error('AI error:', err);
+      return NextResponse.json({ error: 'AI API error' }, { status: 500 });
     }
 
     const data = await response.json();
