@@ -109,7 +109,7 @@ export default function LandingPage() {
       {/* Pricing */}
       <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem 2rem 6rem', textAlign: 'center' }}>
         <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.75rem' }}>Simple pricing</h2>
-        <p style={{ color: muted, marginBottom: '3rem', fontSize: '1rem' }}>Start free. Scale when you&apos;re ready.</p>
+        <p style={{ color: muted, marginBottom: '3rem', fontSize: '1rem' }}>7-day free trial on paid plans. No credit card required.</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
           {[
             {
@@ -128,7 +128,7 @@ export default function LandingPage() {
             },
             {
               name: 'Agency',
-              price: '$99',
+              price: '$149',
               period: '/month',
               features: ['15 connected accounts', 'Team collaboration', 'White-label reports', 'Priority support', 'Custom AI training', 'API access'],
               highlight: false,
