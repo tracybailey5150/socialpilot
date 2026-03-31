@@ -22,7 +22,7 @@ Make each variation distinct. Include 3-5 relevant hashtags per post. Return onl
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4.1-mini',
         messages: [
           { role: 'system', content: 'You are a social media content expert. Always return valid JSON only.' },
           { role: 'user', content: prompt },
