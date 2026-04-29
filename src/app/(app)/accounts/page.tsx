@@ -31,13 +31,6 @@ const tier2Platforms = [
 ];
 
 const platformTokenInfo: Record<string, { label: string; fields: { key: string; label: string; placeholder: string }[]; help: string }> = {
-  facebook: {
-    label: 'Facebook',
-    fields: [
-      { key: 'access_token', label: 'Page Access Token', placeholder: 'EAAxxxxxxx...' },
-    ],
-    help: 'Get your Page Access Token from the Facebook Developer Portal (developers.facebook.com). Create an app, add the Pages API, and generate a long-lived page token.',
-  },
   instagram: {
     label: 'Instagram',
     fields: [
@@ -69,6 +62,9 @@ export default function AccountsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [postingTest, setPostingTest] = useState<string | null>(null);
+  const [testPostResult, setTestPostResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const loadAccounts = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -88,9 +84,31 @@ export default function AccountsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { loadAccounts(); }, []);
+  useEffect(() => {
+    loadAccounts();
+
+    // Check URL params for success/error messages
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('connected') === 'facebook') {
+      setSuccessMessage('Facebook Page connected successfully!');
+      // Clean URL without reload
+      window.history.replaceState({}, '', window.location.pathname);
+      setTimeout(() => setSuccessMessage(''), 5000);
+    }
+    const urlError = params.get('error');
+    if (urlError) {
+      setError(decodeURIComponent(urlError));
+      window.history.replaceState({}, '', window.location.pathname);
+      setTimeout(() => setError(''), 8000);
+    }
+  }, []);
 
   const openConnect = (platformId: string) => {
+    // Facebook uses OAuth flow instead of manual token entry
+    if (platformId === 'facebook') {
+      window.location.href = '/api/auth/facebook';
+      return;
+    }
     setConnectModal(platformId);
     setFormData({ display_name: '', platform_username: '', access_token: '' });
     setError('');
@@ -149,6 +167,36 @@ export default function AccountsPage() {
     loadAccounts();
   };
 
+  const handleTestPost = async (platformId: string) => {
+    const account = accounts[platformId];
+    if (!account) return;
+    setPostingTest(platformId);
+    setTestPostResult(null);
+
+    try {
+      const res = await fetch('/api/facebook/post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Test post from SocialPilot - ${new Date().toLocaleString()}`,
+          accountId: account.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setTestPostResult({ type: 'success', message: `Posted successfully! Post ID: ${data.postId}` });
+      } else {
+        setTestPostResult({ type: 'error', message: data.error || 'Post failed' });
+      }
+    } catch (err) {
+      setTestPostResult({ type: 'error', message: 'Network error while posting' });
+    }
+    setPostingTest(null);
+    setTimeout(() => setTestPostResult(null), 6000);
+  };
+
   return (
     <div style={{ maxWidth: '800px' }}>
       <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.5rem', color: text }}>Connected Accounts</h1>
@@ -156,9 +204,30 @@ export default function AccountsPage() {
         Link your social media accounts to start posting and monitoring across all platforms.
       </p>
 
+      {/* Success Message */}
+      {successMessage && (
+        <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '10px', padding: '0.85rem 1.25rem', marginBottom: '1.5rem', color: accent, fontSize: '0.9rem', fontWeight: 600 }}>
+          {successMessage}
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && !connectModal && (
+        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '10px', padding: '0.85rem 1.25rem', marginBottom: '1.5rem', color: '#EF4444', fontSize: '0.9rem' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Test Post Result */}
+      {testPostResult && (
+        <div style={{ background: testPostResult.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${testPostResult.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`, borderRadius: '10px', padding: '0.85rem 1.25rem', marginBottom: '1.5rem', color: testPostResult.type === 'success' ? accent : '#EF4444', fontSize: '0.9rem' }}>
+          {testPostResult.message}
+        </div>
+      )}
+
       {/* Tier 1 */}
       <h2 style={{ fontSize: '1rem', fontWeight: 700, color: accent, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        ✅ Available Now
+        Available Now
       </h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2.5rem' }}>
         {tier1Platforms.map((p) => {
@@ -191,20 +260,34 @@ export default function AccountsPage() {
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                 {isConnected ? (
-                  <button
-                    onClick={() => handleDisconnect(p.id)}
-                    disabled={disconnecting === p.id}
-                    style={{ background: 'transparent', border: `1px solid rgba(239,68,68,0.4)`, color: '#EF4444', borderRadius: '8px', padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: 600, cursor: disconnecting === p.id ? 'not-allowed' : 'pointer', opacity: disconnecting === p.id ? 0.6 : 1 }}
-                  >
-                    {disconnecting === p.id ? 'Removing...' : 'Disconnect'}
-                  </button>
+                  <>
+                    {p.id === 'facebook' && (
+                      <button
+                        onClick={() => handleTestPost(p.id)}
+                        disabled={postingTest === p.id}
+                        style={{ background: 'transparent', border: `1px solid rgba(24,119,242,0.4)`, color: '#1877F2', borderRadius: '8px', padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: 600, cursor: postingTest === p.id ? 'not-allowed' : 'pointer', opacity: postingTest === p.id ? 0.6 : 1 }}
+                      >
+                        {postingTest === p.id ? 'Posting...' : 'Post Test'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDisconnect(p.id)}
+                      disabled={disconnecting === p.id}
+                      style={{ background: 'transparent', border: `1px solid rgba(239,68,68,0.4)`, color: '#EF4444', borderRadius: '8px', padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: 600, cursor: disconnecting === p.id ? 'not-allowed' : 'pointer', opacity: disconnecting === p.id ? 0.6 : 1 }}
+                    >
+                      {disconnecting === p.id ? 'Removing...' : 'Disconnect'}
+                    </button>
+                  </>
                 ) : (
                   <button
                     onClick={() => openConnect(p.id)}
                     disabled={loading}
-                    style={{ background: accent, border: 'none', color: '#fff', borderRadius: '8px', padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                    style={p.id === 'facebook'
+                      ? { background: '#1877F2', border: 'none', color: '#fff', borderRadius: '8px', padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }
+                      : { background: accent, border: 'none', color: '#fff', borderRadius: '8px', padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }
+                    }
                   >
-                    Connect
+                    {p.id === 'facebook' ? 'Connect with Facebook' : 'Connect'}
                   </button>
                 )}
               </div>
@@ -215,7 +298,7 @@ export default function AccountsPage() {
 
       {/* Tier 2 */}
       <h2 style={{ fontSize: '1rem', fontWeight: 700, color: muted, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        🚧 Coming Soon
+        Coming Soon
       </h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {tier2Platforms.map((p) => (
@@ -238,31 +321,31 @@ export default function AccountsPage() {
 
       {/* API Key Info Section */}
       <div style={{ marginTop: '2rem', background: 'rgba(16,185,129,0.06)', border: `1px solid rgba(16,185,129,0.15)`, borderRadius: '16px', padding: '1.5rem' }}>
-        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: accent, marginTop: 0, marginBottom: '1rem' }}>🔑 API Keys Guide</h3>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: accent, marginTop: 0, marginBottom: '1rem' }}>API Keys Guide</h3>
         <p style={{ color: muted, fontSize: '0.85rem', marginTop: 0, marginBottom: '1rem', lineHeight: 1.6 }}>
           Each platform requires specific API credentials to post on your behalf. Here is what you need:
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>📘 Facebook</div>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>Facebook</div>
             <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
-              <strong style={{ color: text }}>Page Access Token</strong> — From the Facebook Developer Portal (developers.facebook.com). Create an app, add the Pages API, generate a long-lived page access token.
+              <strong style={{ color: accent }}>OAuth Connected</strong> — Click "Connect with Facebook" above to authorize SocialPilot to post to your Pages. No manual token entry needed.
             </div>
           </div>
           <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>📸 Instagram</div>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>Instagram</div>
             <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
               <strong style={{ color: text }}>Connected via Facebook</strong> — Link your Instagram Business account to a Facebook Page, then use the same Page Access Token from the Meta API.
             </div>
           </div>
           <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>▶️ YouTube</div>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>YouTube</div>
             <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
               <strong style={{ color: text }}>YouTube Data API Key + OAuth Token</strong> — Enable YouTube Data API v3 in Google Cloud Console, create OAuth 2.0 credentials, and generate an access token for your channel.
             </div>
           </div>
           <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>🐦 X / Twitter</div>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>X / Twitter</div>
             <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
               <strong style={{ color: text }}>API Key + API Secret + Bearer Token</strong> — Go to developer.x.com, create a project and app, copy your Bearer Token. API Key and Secret are configured in app settings for OAuth.
             </div>
@@ -270,7 +353,7 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      {/* Connect Modal */}
+      {/* Connect Modal (for non-Facebook platforms) */}
       {connectModal && platformTokenInfo[connectModal] && (
         <>
           <div onClick={() => setConnectModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200 }} />
