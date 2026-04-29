@@ -38,13 +38,6 @@ const platformTokenInfo: Record<string, { label: string; fields: { key: string; 
     ],
     help: 'Instagram uses the same Meta/Facebook API. Connect your Instagram Business account to a Facebook Page, then use the same Page Access Token.',
   },
-  youtube: {
-    label: 'YouTube',
-    fields: [
-      { key: 'access_token', label: 'YouTube OAuth Token', placeholder: 'ya29.xxxxxxx...' },
-    ],
-    help: 'Go to Google Cloud Console, enable the YouTube Data API v3, create OAuth 2.0 credentials, and generate an access token for your channel.',
-  },
   twitter: {
     label: 'X / Twitter',
     fields: [
@@ -89,9 +82,13 @@ export default function AccountsPage() {
 
     // Check URL params for success/error messages
     const params = new URLSearchParams(window.location.search);
-    if (params.get('connected') === 'facebook') {
+    const connectedPlatform = params.get('connected');
+    if (connectedPlatform === 'facebook') {
       setSuccessMessage('Facebook Page connected successfully!');
-      // Clean URL without reload
+      window.history.replaceState({}, '', window.location.pathname);
+      setTimeout(() => setSuccessMessage(''), 5000);
+    } else if (connectedPlatform === 'youtube') {
+      setSuccessMessage('YouTube channel connected successfully!');
       window.history.replaceState({}, '', window.location.pathname);
       setTimeout(() => setSuccessMessage(''), 5000);
     }
@@ -107,6 +104,11 @@ export default function AccountsPage() {
     // Facebook uses OAuth flow instead of manual token entry
     if (platformId === 'facebook') {
       window.location.href = '/api/auth/facebook';
+      return;
+    }
+    // YouTube uses Google OAuth flow
+    if (platformId === 'youtube') {
+      window.location.href = '/api/auth/youtube';
       return;
     }
     setConnectModal(platformId);
@@ -174,21 +176,41 @@ export default function AccountsPage() {
     setTestPostResult(null);
 
     try {
-      const res = await fetch('/api/facebook/post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: `Test post from SocialPilot - ${new Date().toLocaleString()}`,
-          accountId: account.id,
-        }),
-      });
+      if (platformId === 'facebook') {
+        const res = await fetch('/api/facebook/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: `Test post from SocialPilot - ${new Date().toLocaleString()}`,
+            accountId: account.id,
+          }),
+        });
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (data.success) {
-        setTestPostResult({ type: 'success', message: `Posted successfully! Post ID: ${data.postId}` });
-      } else {
-        setTestPostResult({ type: 'error', message: data.error || 'Post failed' });
+        if (data.success) {
+          setTestPostResult({ type: 'success', message: `Posted successfully! Post ID: ${data.postId}` });
+        } else {
+          setTestPostResult({ type: 'error', message: data.error || 'Post failed' });
+        }
+      } else if (platformId === 'youtube') {
+        const res = await fetch('/api/youtube/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: 'Connection Verification',
+            description: 'Verifying YouTube connection from SocialPilot',
+            accountId: account.id,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          setTestPostResult({ type: 'success', message: `YouTube connected! Channel: ${data.channelTitle} (${data.subscriberCount} subscribers, ${data.videoCount} videos)` });
+        } else {
+          setTestPostResult({ type: 'error', message: data.error || 'Verification failed' });
+        }
       }
     } catch (err) {
       setTestPostResult({ type: 'error', message: 'Network error while posting' });
@@ -270,6 +292,15 @@ export default function AccountsPage() {
                         {postingTest === p.id ? 'Posting...' : 'Post Test'}
                       </button>
                     )}
+                    {p.id === 'youtube' && (
+                      <button
+                        onClick={() => handleTestPost(p.id)}
+                        disabled={postingTest === p.id}
+                        style={{ background: 'transparent', border: `1px solid rgba(255,0,0,0.4)`, color: '#FF0000', borderRadius: '8px', padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: 600, cursor: postingTest === p.id ? 'not-allowed' : 'pointer', opacity: postingTest === p.id ? 0.6 : 1 }}
+                      >
+                        {postingTest === p.id ? 'Verifying...' : 'Verify'}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDisconnect(p.id)}
                       disabled={disconnecting === p.id}
@@ -284,10 +315,12 @@ export default function AccountsPage() {
                     disabled={loading}
                     style={p.id === 'facebook'
                       ? { background: '#1877F2', border: 'none', color: '#fff', borderRadius: '8px', padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }
+                      : p.id === 'youtube'
+                      ? { background: '#FF0000', border: 'none', color: '#fff', borderRadius: '8px', padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }
                       : { background: accent, border: 'none', color: '#fff', borderRadius: '8px', padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }
                     }
                   >
-                    {p.id === 'facebook' ? 'Connect with Facebook' : 'Connect'}
+                    {p.id === 'facebook' ? 'Connect with Facebook' : p.id === 'youtube' ? 'Connect with YouTube' : 'Connect'}
                   </button>
                 )}
               </div>
@@ -341,7 +374,7 @@ export default function AccountsPage() {
           <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
             <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>YouTube</div>
             <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
-              <strong style={{ color: text }}>YouTube Data API Key + OAuth Token</strong> — Enable YouTube Data API v3 in Google Cloud Console, create OAuth 2.0 credentials, and generate an access token for your channel.
+              <strong style={{ color: accent }}>OAuth Connected</strong> — Click "Connect with YouTube" above to authorize SocialPilot to access your YouTube channel. No manual token entry needed.
             </div>
           </div>
           <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
