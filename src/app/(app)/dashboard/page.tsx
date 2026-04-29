@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase/client';
 
 const bg = '#070C18';
 const card = '#0C1220';
@@ -17,7 +18,7 @@ const stats = [
   { label: 'Total Reach', value: '24.3k', change: '+12% this week', icon: '👁️' },
 ];
 
-const platformStatus = [
+const defaultPlatformStatus = [
   { id: 'facebook', icon: '📘', name: 'Facebook', connected: false },
   { id: 'instagram', icon: '📸', name: 'Instagram', connected: false },
   { id: 'youtube', icon: '▶️', name: 'YouTube', connected: false },
@@ -33,7 +34,38 @@ const quickActions = [
 
 export default function DashboardPage() {
   const [quickPost, setQuickPost] = useState('');
+  const [platformStatus, setPlatformStatus] = useState(defaultPlatformStatus);
+  const [userName, setUserName] = useState('');
   const router = useRouter();
+
+  useEffect(() => {
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get display name
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+      const displayName = profile?.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || '';
+      setUserName(displayName.split(' ')[0]);
+
+      // Get connected accounts
+      const { data: accounts } = await supabase
+        .from('social_accounts')
+        .select('platform')
+        .eq('user_id', user.id);
+
+      const connectedIds = new Set((accounts ?? []).map((a: { platform: string }) => a.platform));
+      setPlatformStatus(defaultPlatformStatus.map(p => ({
+        ...p,
+        connected: connectedIds.has(p.id),
+      })));
+    };
+    load();
+  }, []);
 
   const handleQuickPost = () => {
     if (quickPost.trim()) {
@@ -41,10 +73,17 @@ export default function DashboardPage() {
     }
   };
 
+  const greeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   return (
     <div style={{ maxWidth: '1100px' }}>
       <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem', color: text }}>Good morning, Tracy 👋</h1>
+        <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.25rem', color: text }}>{greeting()}, {userName || 'there'} 👋</h1>
         <p style={{ color: muted, fontSize: '0.9rem', margin: 0 }}>Here&apos;s what&apos;s happening with your social accounts.</p>
       </div>
 

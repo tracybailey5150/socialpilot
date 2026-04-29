@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase/client';
 
 const bg = '#070C18';
 const card = '#0C1220';
@@ -23,13 +24,40 @@ const navItems = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        router.push('/login');
+      } else {
+        setAuthChecked(true);
+      }
+    });
+  }, [router]);
 
   useEffect(() => { setMenuOpen(false); }, [pathname]);
   useEffect(() => {
     document.body.style.overflow = menuOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [menuOpen]);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
+  if (!authChecked) {
+    return (
+      <div style={{ minHeight: '100vh', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: muted, fontSize: '1rem', fontWeight: 600 }}>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: bg, color: text, fontFamily: 'system-ui, -apple-system, sans-serif' }}>
@@ -61,7 +89,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               })}
             </nav>
             <div style={{ borderTop: `1px solid ${border}`, padding: '20px' }}>
-              <Link href="/login" style={{ display: 'block', width: '100%', background: 'transparent', border: `1px solid ${border}`, borderRadius: '8px', color: muted, padding: '12px', fontSize: '14px', textAlign: 'center', textDecoration: 'none' }}>Sign Out</Link>
+              <button
+                onClick={handleSignOut}
+                disabled={signingOut}
+                style={{ display: 'block', width: '100%', background: 'transparent', border: `1px solid ${border}`, borderRadius: '8px', color: muted, padding: '12px', fontSize: '14px', textAlign: 'center', cursor: signingOut ? 'not-allowed' : 'pointer' }}
+              >
+                {signingOut ? 'Signing out...' : 'Sign Out'}
+              </button>
             </div>
           </div>
         </>

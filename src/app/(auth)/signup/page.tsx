@@ -1,5 +1,7 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase/client';
 
 export default function SignupPage() {
   const bg = '#070C18';
@@ -12,6 +14,33 @@ export default function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name: name },
+        },
+      });
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+        return;
+      }
+      router.push('/dashboard');
+    } catch {
+      setError('An unexpected error occurred.');
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{ background: bg, color: text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, -apple-system, sans-serif', padding: '1rem' }}>
@@ -22,7 +51,12 @@ export default function SignupPage() {
           <p style={{ color: muted, margin: 0, fontSize: '0.9rem' }}>Start managing your social media on autopilot</p>
         </div>
 
-        <div style={{ background: card, border: `1px solid ${border}`, borderRadius: '16px', padding: '2rem' }}>
+        <form onSubmit={handleSignup} style={{ background: card, border: `1px solid ${border}`, borderRadius: '16px', padding: '2rem' }}>
+          {error && (
+            <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.25rem', color: '#EF4444', fontSize: '0.875rem' }}>
+              {error}
+            </div>
+          )}
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: muted }}>Full Name</label>
             <input
@@ -30,6 +64,7 @@ export default function SignupPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Tracy Bailey"
+              required
               style={{ width: '100%', background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '0.75rem 1rem', color: text, fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
@@ -40,6 +75,7 @@ export default function SignupPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
+              required
               style={{ width: '100%', background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '0.75rem 1rem', color: text, fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
@@ -50,18 +86,21 @@ export default function SignupPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              required
               style={{ width: '100%', background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '0.75rem 1rem', color: text, fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
           <button
-            style={{ width: '100%', background: accent, color: '#fff', border: 'none', borderRadius: '8px', padding: '0.875rem', fontSize: '1rem', fontWeight: 700, cursor: 'pointer' }}
+            type="submit"
+            disabled={loading}
+            style={{ width: '100%', background: loading ? '#065F46' : accent, color: '#fff', border: 'none', borderRadius: '8px', padding: '0.875rem', fontSize: '1rem', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
           >
-            Create Account
+            {loading ? 'Creating account...' : 'Create Account'}
           </button>
           <p style={{ color: muted, fontSize: '0.75rem', textAlign: 'center', marginTop: '1rem', marginBottom: 0 }}>
             By signing up, you agree to our Terms of Service and Privacy Policy.
           </p>
-        </div>
+        </form>
 
         <p style={{ textAlign: 'center', color: muted, fontSize: '0.875rem', marginTop: '1.5rem' }}>
           Already have an account?{' '}

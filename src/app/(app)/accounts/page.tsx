@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase/client';
 
 const bg = '#070C18';
 const card = '#0C1220';
@@ -8,18 +9,12 @@ const text = '#F1F5F9';
 const accent = '#10B981';
 const muted = '#94A3B8';
 
-type ConnectedAccount = {
-  name: string;
-  followers: string;
-};
-
-type PlatformState = {
-  connected: boolean;
-  account: ConnectedAccount | null;
-};
-
-type PlatformsState = {
-  [key: string]: PlatformState;
+type SocialAccount = {
+  id: string;
+  platform: string;
+  display_name: string;
+  platform_username: string;
+  access_token: string;
 };
 
 const tier1Platforms = [
@@ -35,29 +30,123 @@ const tier2Platforms = [
   { id: 'pinterest', icon: '📌', name: 'Pinterest', color: '#E60023', desc: 'Create and share Pinterest pins' },
 ];
 
-export default function AccountsPage() {
-  const [platforms, setPlatforms] = useState<PlatformsState>({
-    facebook: { connected: false, account: null },
-    instagram: { connected: false, account: null },
-    youtube: { connected: false, account: null },
-    twitter: { connected: false, account: null },
-  });
+const platformTokenInfo: Record<string, { label: string; fields: { key: string; label: string; placeholder: string }[]; help: string }> = {
+  facebook: {
+    label: 'Facebook',
+    fields: [
+      { key: 'access_token', label: 'Page Access Token', placeholder: 'EAAxxxxxxx...' },
+    ],
+    help: 'Get your Page Access Token from the Facebook Developer Portal (developers.facebook.com). Create an app, add the Pages API, and generate a long-lived page token.',
+  },
+  instagram: {
+    label: 'Instagram',
+    fields: [
+      { key: 'access_token', label: 'Instagram Access Token', placeholder: 'IGQVxxxxxxx...' },
+    ],
+    help: 'Instagram uses the same Meta/Facebook API. Connect your Instagram Business account to a Facebook Page, then use the same Page Access Token.',
+  },
+  youtube: {
+    label: 'YouTube',
+    fields: [
+      { key: 'access_token', label: 'YouTube OAuth Token', placeholder: 'ya29.xxxxxxx...' },
+    ],
+    help: 'Go to Google Cloud Console, enable the YouTube Data API v3, create OAuth 2.0 credentials, and generate an access token for your channel.',
+  },
+  twitter: {
+    label: 'X / Twitter',
+    fields: [
+      { key: 'access_token', label: 'Bearer Token', placeholder: 'AAAAAAAAAAAAAAAAAAAAAxxxxxxx...' },
+    ],
+    help: 'Go to developer.x.com, create a project/app, and copy your Bearer Token. For posting, you also need API Key + Secret configured in your app settings.',
+  },
+};
 
-  const toggleConnect = (id: string) => {
-    setPlatforms((prev) => {
-      const current = prev[id];
-      if (current.connected) {
-        return { ...prev, [id]: { connected: false, account: null } };
-      } else {
-        const mockAccounts: Record<string, ConnectedAccount> = {
-          facebook: { name: 'Tracy Bailey Business', followers: '2,341' },
-          instagram: { name: '@tracybailey', followers: '5,812' },
-          youtube: { name: 'Tracy Bailey Channel', followers: '1,094' },
-          twitter: { name: '@tracybailey', followers: '3,287' },
-        };
-        return { ...prev, [id]: { connected: true, account: mockAccounts[id] } };
-      }
+export default function AccountsPage() {
+  const [accounts, setAccounts] = useState<Record<string, SocialAccount | null>>({});
+  const [loading, setLoading] = useState(true);
+  const [connectModal, setConnectModal] = useState<string | null>(null);
+  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [disconnecting, setDisconnecting] = useState<string | null>(null);
+
+  const loadAccounts = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('social_accounts')
+      .select('id, platform, display_name, platform_username, access_token')
+      .eq('user_id', user.id);
+
+    const mapped: Record<string, SocialAccount | null> = {};
+    for (const p of tier1Platforms) {
+      const found = (data ?? []).find((a: SocialAccount) => a.platform === p.id);
+      mapped[p.id] = found ?? null;
+    }
+    setAccounts(mapped);
+    setLoading(false);
+  };
+
+  useEffect(() => { loadAccounts(); }, []);
+
+  const openConnect = (platformId: string) => {
+    setConnectModal(platformId);
+    setFormData({ display_name: '', platform_username: '', access_token: '' });
+    setError('');
+  };
+
+  const handleSaveConnection = async () => {
+    if (!connectModal) return;
+    const { display_name, platform_username, access_token } = formData;
+    if (!display_name.trim() || !access_token.trim()) {
+      setError('Account name and access token are required.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setError('Not authenticated.');
+      setSaving(false);
+      return;
+    }
+
+    const { error: insertError } = await supabase.from('social_accounts').insert({
+      user_id: user.id,
+      platform: connectModal,
+      access_token: access_token.trim(),
+      display_name: display_name.trim(),
+      platform_username: platform_username.trim() || null,
     });
+
+    if (insertError) {
+      setError(insertError.message);
+      setSaving(false);
+      return;
+    }
+
+    setSaving(false);
+    setConnectModal(null);
+    loadAccounts();
+  };
+
+  const handleDisconnect = async (platformId: string) => {
+    const account = accounts[platformId];
+    if (!account) return;
+    setDisconnecting(platformId);
+
+    const { error: delError } = await supabase
+      .from('social_accounts')
+      .delete()
+      .eq('id', account.id);
+
+    if (delError) {
+      alert('Error disconnecting: ' + delError.message);
+    }
+    setDisconnecting(null);
+    loadAccounts();
   };
 
   return (
@@ -73,9 +162,10 @@ export default function AccountsPage() {
       </h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2.5rem' }}>
         {tier1Platforms.map((p) => {
-          const state = platforms[p.id];
+          const account = accounts[p.id];
+          const isConnected = !!account;
           return (
-            <div key={p.id} style={{ background: card, border: `1px solid ${state?.connected ? 'rgba(16,185,129,0.3)' : border}`, borderRadius: '16px', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
+            <div key={p.id} style={{ background: card, border: `1px solid ${isConnected ? 'rgba(16,185,129,0.3)' : border}`, borderRadius: '16px', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
                 <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>
                   {p.icon}
@@ -83,32 +173,35 @@ export default function AccountsPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {p.name}
-                    {state?.connected && (
+                    {isConnected && (
                       <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: accent }} />
                     )}
                   </div>
-                  {state?.connected && state.account ? (
+                  {isConnected && account ? (
                     <div style={{ color: muted, fontSize: '0.85rem' }}>
-                      <span style={{ color: text, fontWeight: 600 }}>{state.account.name}</span>
-                      {' · '}
-                      <span>{state.account.followers} followers</span>
+                      <span style={{ color: text, fontWeight: 600 }}>{account.display_name}</span>
+                      {account.platform_username && <span> · @{account.platform_username}</span>}
                     </div>
                   ) : (
-                    <div style={{ color: muted, fontSize: '0.85rem' }}>{p.desc}</div>
+                    <div style={{ color: muted, fontSize: '0.85rem' }}>
+                      {loading ? 'Loading...' : p.desc}
+                    </div>
                   )}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-                {state?.connected ? (
+                {isConnected ? (
                   <button
-                    onClick={() => toggleConnect(p.id)}
-                    style={{ background: 'transparent', border: `1px solid rgba(239,68,68,0.4)`, color: '#EF4444', borderRadius: '8px', padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
+                    onClick={() => handleDisconnect(p.id)}
+                    disabled={disconnecting === p.id}
+                    style={{ background: 'transparent', border: `1px solid rgba(239,68,68,0.4)`, color: '#EF4444', borderRadius: '8px', padding: '0.55rem 1rem', fontSize: '0.85rem', fontWeight: 600, cursor: disconnecting === p.id ? 'not-allowed' : 'pointer', opacity: disconnecting === p.id ? 0.6 : 1 }}
                   >
-                    Disconnect
+                    {disconnecting === p.id ? 'Removing...' : 'Disconnect'}
                   </button>
                 ) : (
                   <button
-                    onClick={() => toggleConnect(p.id)}
+                    onClick={() => openConnect(p.id)}
+                    disabled={loading}
                     style={{ background: accent, border: 'none', color: '#fff', borderRadius: '8px', padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                   >
                     Connect
@@ -143,10 +236,111 @@ export default function AccountsPage() {
         ))}
       </div>
 
-      {/* Info banner */}
-      <div style={{ marginTop: '2rem', background: 'rgba(16,185,129,0.08)', border: `1px solid rgba(16,185,129,0.2)`, borderRadius: '12px', padding: '1rem 1.25rem', fontSize: '0.875rem', color: muted, lineHeight: 1.7 }}>
-        <strong style={{ color: accent }}>ℹ️ Demo Mode</strong> — Connect buttons simulate OAuth for preview. In production, you&apos;ll be redirected to each platform&apos;s authorization page.
+      {/* API Key Info Section */}
+      <div style={{ marginTop: '2rem', background: 'rgba(16,185,129,0.06)', border: `1px solid rgba(16,185,129,0.15)`, borderRadius: '16px', padding: '1.5rem' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: accent, marginTop: 0, marginBottom: '1rem' }}>🔑 API Keys Guide</h3>
+        <p style={{ color: muted, fontSize: '0.85rem', marginTop: 0, marginBottom: '1rem', lineHeight: 1.6 }}>
+          Each platform requires specific API credentials to post on your behalf. Here is what you need:
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>📘 Facebook</div>
+            <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
+              <strong style={{ color: text }}>Page Access Token</strong> — From the Facebook Developer Portal (developers.facebook.com). Create an app, add the Pages API, generate a long-lived page access token.
+            </div>
+          </div>
+          <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>📸 Instagram</div>
+            <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
+              <strong style={{ color: text }}>Connected via Facebook</strong> — Link your Instagram Business account to a Facebook Page, then use the same Page Access Token from the Meta API.
+            </div>
+          </div>
+          <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>▶️ YouTube</div>
+            <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
+              <strong style={{ color: text }}>YouTube Data API Key + OAuth Token</strong> — Enable YouTube Data API v3 in Google Cloud Console, create OAuth 2.0 credentials, and generate an access token for your channel.
+            </div>
+          </div>
+          <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>🐦 X / Twitter</div>
+            <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
+              <strong style={{ color: text }}>API Key + API Secret + Bearer Token</strong> — Go to developer.x.com, create a project and app, copy your Bearer Token. API Key and Secret are configured in app settings for OAuth.
+            </div>
+          </div>
+        </div>
       </div>
+
+      {/* Connect Modal */}
+      {connectModal && platformTokenInfo[connectModal] && (
+        <>
+          <div onClick={() => setConnectModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 200 }} />
+          <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 201, background: card, border: `1px solid ${border}`, borderRadius: '20px', padding: '2rem', width: '90%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 0.25rem', color: text }}>
+              Connect {platformTokenInfo[connectModal].label}
+            </h3>
+            <p style={{ color: muted, fontSize: '0.82rem', marginTop: '0.25rem', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+              {platformTokenInfo[connectModal].help}
+            </p>
+
+            {error && (
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem', color: '#EF4444', fontSize: '0.85rem' }}>
+                {error}
+              </div>
+            )}
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.4rem', color: muted }}>Account Name</label>
+              <input
+                type="text"
+                value={formData.display_name || ''}
+                onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                placeholder="e.g. My Business Page"
+                style={{ width: '100%', background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '0.7rem 0.9rem', color: text, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.4rem', color: muted }}>Username (optional)</label>
+              <input
+                type="text"
+                value={formData.platform_username || ''}
+                onChange={(e) => setFormData({ ...formData, platform_username: e.target.value })}
+                placeholder="e.g. @yourbrand"
+                style={{ width: '100%', background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '0.7rem 0.9rem', color: text, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {platformTokenInfo[connectModal].fields.map((field) => (
+              <div key={field.key} style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.4rem', color: muted }}>{field.label}</label>
+                <input
+                  type="password"
+                  value={formData[field.key] || ''}
+                  onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
+                  placeholder={field.placeholder}
+                  style={{ width: '100%', background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '0.7rem 0.9rem', color: text, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace' }}
+                />
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <button
+                onClick={handleSaveConnection}
+                disabled={saving}
+                style={{ flex: 1, background: saving ? '#065F46' : accent, color: '#fff', border: 'none', borderRadius: '8px', padding: '0.75rem', fontSize: '0.9rem', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}
+              >
+                {saving ? 'Connecting...' : 'Save Connection'}
+              </button>
+              <button
+                onClick={() => setConnectModal(null)}
+                style={{ background: 'transparent', border: `1px solid ${border}`, color: muted, borderRadius: '8px', padding: '0.75rem 1.25rem', fontSize: '0.9rem', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
