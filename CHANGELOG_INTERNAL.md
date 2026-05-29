@@ -13,6 +13,12 @@ Each entry follows this structure:
 
 ---
 
+## 2026-05-28 — Full RLS Security Hardening
+- Fixed: `post_results` had `{public} ALL with_check=true` — any user could manipulate results. Now user-scoped via posts table
+- 15 total policies. 0 public, 0 anon, 15 authenticated. All user-scoped.
+
+---
+
 ## 2026-04-27 — Claude Agent
 **Summary:** Initial operational documentation added.
 **Files Changed:** AGENTS.md, PROJECT_CONTEXT.md, ARCHITECTURE.md, RUNBOOK.md, SECURITY_GUARDRAILS.md, MCP_TOOLS.md, DEPLOYMENT_CHECKLIST.md, ENVIRONMENT.md, BACKUP_AND_RECOVERY.md, CHANGELOG_INTERNAL.md, .env.example

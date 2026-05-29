@@ -34,6 +34,13 @@
 - No force pushes to `main`.
 - Build must pass before merge.
 
+## Row-Level Security (RLS)
+
+- **15 total RLS policies.** Zero `{public}` role policies. All `{authenticated}`.
+- **`post_results`:** Was `{public} ALL with_check=true` (any user could manipulate any post results). Now user-scoped through posts table: `post_id IN (SELECT id FROM posts WHERE user_id = auth.uid())`.
+- **All user data is scoped via `user_id = auth.uid()`:** posts, social_accounts, ai_generations, post_results.
+- **Service role** bypasses RLS for server-side operations (OAuth callbacks, admin tasks).
+
 ## Audit Trail
 - All changes must be committed with descriptive messages.
 - OAuth flow changes must be documented in PR description.
