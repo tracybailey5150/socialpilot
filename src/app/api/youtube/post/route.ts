@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { getValidYouTubeToken } from '@/lib/token-refresh';
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,55 +53,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if token is expired and refresh if needed
-    let accessToken = account.access_token;
-
-    if (account.token_expires_at) {
-      const expiresAt = new Date(account.token_expires_at).getTime();
-      const now = Date.now();
-      // Refresh if token expires within 5 minutes
-      if (now >= expiresAt - 5 * 60 * 1000) {
-        if (!account.refresh_token) {
-          return NextResponse.json(
-            { error: 'Token expired and no refresh token available. Please reconnect your YouTube account.' },
-            { status: 401 }
-          );
-        }
-
-        const refreshRes = await fetch('https://oauth2.googleapis.com/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: process.env.GOOGLE_CLIENT_ID!,
-            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-            refresh_token: account.refresh_token,
-            grant_type: 'refresh_token',
-          }),
-        });
-
-        const refreshData = await refreshRes.json();
-
-        if (refreshData.error) {
-          console.error('YouTube token refresh error:', refreshData.error);
-          return NextResponse.json(
-            { error: 'Failed to refresh YouTube token. Please reconnect your account.' },
-            { status: 401 }
-          );
-        }
-
-        accessToken = refreshData.access_token;
-        const newExpiresAt = new Date(Date.now() + refreshData.expires_in * 1000).toISOString();
-
-        // Update the stored token
-        await supabaseAdmin
-          .from('social_accounts')
-          .update({
-            access_token: accessToken,
-            token_expires_at: newExpiresAt,
-          })
-          .eq('id', account.id);
-      }
-    }
+    // Auto-refresh token if expired
+    const accessToken = await getValidYouTubeToken(account);
 
     // Verify connection by fetching channel info
     const channelRes = await fetch(
