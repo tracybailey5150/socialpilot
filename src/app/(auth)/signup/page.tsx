@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 
@@ -16,7 +16,26 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.onload = () => {
+      if (turnstileRef.current && (window as any).turnstile) {
+        (window as any).turnstile.render(turnstileRef.current, {
+          sitekey: '0x4AAAAAADnbosqdyYsmdWMd',
+          callback: (token: string) => setCaptchaToken(token),
+          theme: 'dark',
+        });
+      }
+    };
+    document.head.appendChild(script);
+    return () => { document.head.removeChild(script); };
+  }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +47,7 @@ export default function SignupPage() {
         password,
         options: {
           data: { full_name: name },
+          captchaToken: captchaToken ?? undefined,
         },
       });
       if (authError) {
@@ -90,9 +110,10 @@ export default function SignupPage() {
               style={{ width: '100%', background: bg, border: `1px solid ${border}`, borderRadius: '8px', padding: '0.75rem 1rem', color: text, fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
+          <div ref={turnstileRef} style={{ marginBottom: '16px' }} />
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !captchaToken}
             style={{ width: '100%', background: loading ? '#065F46' : accent, color: '#fff', border: 'none', borderRadius: '8px', padding: '0.875rem', fontSize: '1rem', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
           >
             {loading ? 'Creating account...' : 'Create Account'}
