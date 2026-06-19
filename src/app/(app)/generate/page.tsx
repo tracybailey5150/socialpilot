@@ -28,6 +28,7 @@ export default function GeneratePage() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [editText, setEditText] = useState('');
+  const [model, setModel] = useState('');
 
   // Hashtag generator
   const [hashTopic, setHashTopic] = useState('');
@@ -48,6 +49,7 @@ export default function GeneratePage() {
       if (!res.ok) throw new Error('Generation failed');
       const data = await res.json();
       setPosts(data.posts || []);
+      setModel(data.model || '');
     } catch {
       setError('Failed to generate content. Please check your API key or try again.');
     } finally {
@@ -187,9 +189,16 @@ export default function GeneratePage() {
       {/* Results */}
       {posts.length > 0 && (
         <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', color: text }}>
-            Generated Variations ({posts.length})
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, margin: 0, color: text }}>
+              Generated Variations ({posts.length})
+            </h2>
+            {model && (
+              <span style={{ fontSize: '0.75rem', color: muted, background: 'rgba(16,185,129,0.08)', border: `1px solid rgba(16,185,129,0.2)`, padding: '0.25rem 0.75rem', borderRadius: '20px' }}>
+                Powered by {model}
+              </span>
+            )}
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {posts.map((post, idx) => (
               <div key={idx} style={{ background: card, border: `1px solid ${border}`, borderRadius: '12px', padding: '1.25rem' }}>
