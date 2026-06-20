@@ -36,7 +36,7 @@ Return ONLY the reply text, nothing else.`;
           method: 'POST',
           headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'gpt-4.1',
+            model: 'gpt-5.4',
             input: prompt,
             temperature: 0.7,
           }),
@@ -70,7 +70,7 @@ Return ONLY the reply text, nothing else.`;
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 500,
+          max_completion_tokens: 500,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.7,
         }),

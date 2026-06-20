@@ -35,7 +35,7 @@ async function generateWithOpenAI(prompt: string): Promise<{ posts: Array<{ text
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4.1',
+      model: 'gpt-5.4',
       instructions: SYSTEM_PROMPT,
       input: prompt,
       temperature: 0.8,
@@ -80,7 +80,7 @@ async function generateWithAnthropic(prompt: string): Promise<{ posts: Array<{ t
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 4096,
+      max_completion_tokens: 4096,
       system: SYSTEM_PROMPT,
       messages: [
         { role: 'user', content: prompt },
