@@ -35,7 +35,7 @@ async function generateWithOpenAI(prompt: string): Promise<{ posts: Array<{ text
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4.1',
+      model: 'gpt-5.5',
       instructions: SYSTEM_PROMPT,
       input: prompt,
       temperature: 0.8,
