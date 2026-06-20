@@ -36,7 +36,7 @@ Return ONLY the reply text, nothing else.`;
           method: 'POST',
           headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'gpt-5.5',
+            model: 'gpt-4.1',
             input: prompt,
             temperature: 0.7,
           }),
