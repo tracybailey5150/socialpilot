@@ -17,6 +17,7 @@ export default function SignupPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [confirmationSent, setConfirmationSent] = useState(false);
   const turnstileRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -48,6 +49,7 @@ export default function SignupPage() {
         options: {
           data: { full_name: name },
           captchaToken: captchaToken ?? undefined,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
       if (authError) {
@@ -55,12 +57,37 @@ export default function SignupPage() {
         setLoading(false);
         return;
       }
-      router.push('/dashboard');
+      setConfirmationSent(true);
+      setLoading(false);
     } catch {
       setError('An unexpected error occurred.');
       setLoading(false);
     }
   };
+
+  if (confirmationSent) {
+    return (
+      <div style={{ background: bg, color: text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, -apple-system, sans-serif', padding: '1rem' }}>
+        <div style={{ width: '100%', maxWidth: '420px', textAlign: 'center' }}>
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '1.5rem' }}>📱 Social<span style={{ color: accent }}>Pilot</span></div>
+          <div style={{ background: card, border: `1px solid ${border}`, borderRadius: '16px', padding: '2.5rem 2rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📧</div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.75rem' }}>Check your email</h2>
+            <p style={{ color: muted, fontSize: '0.9rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+              We sent a confirmation link to<br />
+              <strong style={{ color: text }}>{email}</strong>
+            </p>
+            <p style={{ color: muted, fontSize: '0.8rem', lineHeight: 1.6 }}>
+              Click the link in your email to verify your account, then you can sign in.
+            </p>
+            <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: `1px solid ${border}` }}>
+              <a href="/login" style={{ color: accent, textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>Go to Sign In</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: bg, color: text, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, -apple-system, sans-serif', padding: '1rem' }}>
