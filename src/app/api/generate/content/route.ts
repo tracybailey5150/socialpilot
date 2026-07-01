@@ -28,7 +28,7 @@ async function generateWithOpenAI(prompt: string): Promise<{ posts: Array<{ text
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
 
-  const response = await fetch('https://api.openai.com/v1/responses', {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${apiKey}`,
@@ -36,9 +36,13 @@ async function generateWithOpenAI(prompt: string): Promise<{ posts: Array<{ text
     },
     body: JSON.stringify({
       model: 'gpt-5.4',
-      instructions: SYSTEM_PROMPT,
-      input: prompt,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: prompt },
+      ],
+      max_completion_tokens: 2000,
       temperature: 0.8,
+      response_format: { type: 'json_object' },
     }),
   });
 
@@ -48,23 +52,12 @@ async function generateWithOpenAI(prompt: string): Promise<{ posts: Array<{ text
   }
 
   const data = await response.json();
-
-  // Responses API returns output array with message items
-  let raw = '';
-  for (const item of data.output || []) {
-    if (item.type === 'message') {
-      for (const content of item.content || []) {
-        if (content.type === 'output_text') {
-          raw += content.text;
-        }
-      }
-    }
-  }
+  const raw = data.choices?.[0]?.message?.content || '';
 
   if (!raw) throw new Error('Empty response from OpenAI');
 
   const parsed = JSON.parse(cleanJsonResponse(raw));
-  return { ...parsed, model: 'GPT-4.1' };
+  return { ...parsed, model: 'GPT-5.4' };
 }
 
 async function generateWithAnthropic(prompt: string): Promise<{ posts: Array<{ text: string; hashtags: string[] }>; model: string }> {
@@ -80,7 +73,7 @@ async function generateWithAnthropic(prompt: string): Promise<{ posts: Array<{ t
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_completion_tokens: 4096,
+      max_tokens: 2000,
       system: SYSTEM_PROMPT,
       messages: [
         { role: 'user', content: prompt },
@@ -108,7 +101,7 @@ export async function POST(req: NextRequest) {
     const { topic, tone, platform, contentType } = await req.json();
     const prompt = buildUserPrompt(topic, tone, platform, contentType);
 
-    // Primary: OpenAI GPT-4.1 — Fallback: Anthropic Claude Sonnet 4.6
+    // Primary: OpenAI GPT-5.4 — Fallback: Anthropic Claude Sonnet 4.6
     let result;
     try {
       result = await generateWithOpenAI(prompt);

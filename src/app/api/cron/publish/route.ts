@@ -83,12 +83,11 @@ export async function GET(req: NextRequest) {
   try {
     const now = new Date().toISOString();
 
-    // Find all scheduled posts that are due
+    // Find all scheduled posts that are due + any stuck in 'publishing' state
     const { data: duePosts, error } = await supabaseAdmin
       .from('posts')
       .select('*')
-      .eq('status', 'scheduled')
-      .lte('scheduled_at', now)
+      .or(`and(status.eq.scheduled,scheduled_at.lte.${now}),status.eq.publishing`)
       .limit(50);
 
     if (error) {

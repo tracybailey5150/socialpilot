@@ -2,7 +2,6 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 
-// POST /api/comments/ai-reply — generate an AI reply suggestion for a comment
 export async function POST(req: NextRequest) {
   try {
     const { commentText, authorName, platform } = await req.json();
@@ -26,35 +25,31 @@ Requirements:
 
 Return ONLY the reply text, nothing else.`;
 
-    // Try OpenAI first, fallback to Anthropic
     let reply = '';
 
+    // Try OpenAI first
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
       try {
-        const res = await fetch('https://api.openai.com/v1/responses', {
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${openaiKey}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
             model: 'gpt-5.4',
-            input: prompt,
+            messages: [{ role: 'user', content: prompt }],
+            max_completion_tokens: 300,
             temperature: 0.7,
           }),
         });
 
         if (res.ok) {
           const data = await res.json();
-          for (const item of data.output || []) {
-            if (item.type === 'message') {
-              for (const content of item.content || []) {
-                if (content.type === 'output_text') reply += content.text;
-              }
-            }
-          }
+          reply = data.choices?.[0]?.message?.content?.trim() || '';
         }
       } catch { /* fall through to Anthropic */ }
     }
 
+    // Fallback to Anthropic
     if (!reply) {
       const anthropicKey = process.env.ANTHROPIC_API_KEY;
       if (!anthropicKey) {
@@ -70,7 +65,7 @@ Return ONLY the reply text, nothing else.`;
         },
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_completion_tokens: 500,
+          max_tokens: 300,
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.7,
         }),
