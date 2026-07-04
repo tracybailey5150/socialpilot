@@ -10,7 +10,7 @@ const accent = '#10B981';
 const muted = '#94A3B8';
 
 const platformIcons: Record<string, string> = {
-  facebook: '📘', instagram: '📸', youtube: '▶️', twitter: '🐦',
+  facebook: '📘', instagram: '📸', youtube: '▶️', twitter: '🐦', linkedin: '💼', tiktok: '🎵', pinterest: '📌',
 };
 
 type Post = {

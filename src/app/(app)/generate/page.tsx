@@ -14,7 +14,7 @@ type GeneratedPost = {
 };
 
 const tones = ['Professional', 'Casual', 'Humorous', 'Inspirational'];
-const platforms = ['All', 'Facebook', 'Instagram', 'Twitter', 'LinkedIn'];
+const platforms = ['All', 'Facebook', 'Instagram', 'Twitter', 'LinkedIn', 'TikTok', 'Pinterest'];
 const contentTypes = ['Announcement', 'Educational', 'Promotional', 'Question', 'Story'];
 
 export default function GeneratePage() {

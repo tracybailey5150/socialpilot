@@ -14,6 +14,9 @@ const CHAR_LIMITS: Record<string, number> = {
   instagram: 2200,
   facebook: 63206,
   youtube: 5000,
+  linkedin: 3000,
+  tiktok: 2200,
+  pinterest: 500,
 };
 
 const platforms = [
@@ -21,6 +24,9 @@ const platforms = [
   { id: 'instagram', icon: '📸', name: 'Instagram' },
   { id: 'youtube', icon: '▶️', name: 'YouTube' },
   { id: 'twitter', icon: '🐦', name: 'X / Twitter' },
+  { id: 'linkedin', icon: '💼', name: 'LinkedIn' },
+  { id: 'tiktok', icon: '🎵', name: 'TikTok' },
+  { id: 'pinterest', icon: '📌', name: 'Pinterest' },
 ];
 
 type TabType = 'all' | 'scheduled' | 'published' | 'draft';

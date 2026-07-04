@@ -177,6 +177,44 @@ async function publishPost(postId: string, userId: string, content: string, plat
             await supabaseAdmin.from('post_results').insert({ post_id: postId, platform, status: 'failed', error_message: 'Instagram requires image_url' });
           }
         }
+      } else if (platform === 'linkedin') {
+        const res = await fetch('https://api.linkedin.com/rest/posts', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${account.access_token}`,
+            'Content-Type': 'application/json',
+            'X-Restli-Protocol-Version': '2.0.0',
+            'LinkedIn-Version': '202401',
+          },
+          body: JSON.stringify({
+            author: `urn:li:person:${account.platform_user_id}`,
+            lifecycleState: 'PUBLISHED',
+            visibility: 'PUBLIC',
+            commentary: content,
+            distribution: { feedDistribution: 'MAIN_FEED' },
+          }),
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || `LinkedIn API error ${res.status}`);
+        }
+        const postUrn = res.headers.get('x-restli-id') || 'linkedin-post';
+        results.push({ platform, success: true, postId: postUrn });
+        await supabaseAdmin.from('post_results').insert({
+          post_id: postId, platform, platform_post_id: postUrn, status: 'published', published_at: new Date().toISOString(),
+        });
+      } else if (platform === 'tiktok') {
+        // TikTok requires video content
+        results.push({ platform, success: false, error: 'TikTok requires video content. Use the TikTok post route with a video URL.' });
+        await supabaseAdmin.from('post_results').insert({
+          post_id: postId, platform, status: 'failed', error_message: 'TikTok requires video content',
+        });
+      } else if (platform === 'pinterest') {
+        // Pinterest requires an image
+        results.push({ platform, success: false, error: 'Pinterest requires an image URL. Use the Pinterest post route with an image.' });
+        await supabaseAdmin.from('post_results').insert({
+          post_id: postId, platform, status: 'failed', error_message: 'Pinterest requires image_url',
+        });
       } else {
         results.push({ platform, success: false, error: `${platform} publishing not yet supported` });
         await supabaseAdmin.from('post_results').insert({

@@ -22,13 +22,12 @@ const tier1Platforms = [
   { id: 'instagram', icon: '📸', name: 'Instagram', color: '#E1306C', desc: 'Post to Instagram via Meta API' },
   { id: 'youtube', icon: '▶️', name: 'YouTube', color: '#FF0000', desc: 'Publish videos to YouTube channels' },
   { id: 'twitter', icon: '🐦', name: 'X / Twitter', color: '#000000', desc: 'Tweet and engage on X / Twitter' },
-];
-
-const tier2Platforms = [
   { id: 'linkedin', icon: '💼', name: 'LinkedIn', color: '#0A66C2', desc: 'Post to LinkedIn profiles & company pages' },
   { id: 'tiktok', icon: '🎵', name: 'TikTok', color: '#010101', desc: 'Upload short videos to TikTok' },
   { id: 'pinterest', icon: '📌', name: 'Pinterest', color: '#E60023', desc: 'Create and share Pinterest pins' },
 ];
+
+const tier2Platforms: { id: string; icon: string; name: string; color: string; desc: string }[] = [];
 
 const platformTokenInfo: Record<string, { label: string; fields: { key: string; label: string; placeholder: string }[]; help: string }> = {
   instagram: {
@@ -83,12 +82,15 @@ export default function AccountsPage() {
     // Check URL params for success/error messages
     const params = new URLSearchParams(window.location.search);
     const connectedPlatform = params.get('connected');
-    if (connectedPlatform === 'facebook') {
-      setSuccessMessage('Facebook Page connected successfully!');
-      window.history.replaceState({}, '', window.location.pathname);
-      setTimeout(() => setSuccessMessage(''), 5000);
-    } else if (connectedPlatform === 'youtube') {
-      setSuccessMessage('YouTube channel connected successfully!');
+    const platformNames: Record<string, string> = {
+      facebook: 'Facebook Page',
+      youtube: 'YouTube channel',
+      linkedin: 'LinkedIn profile',
+      tiktok: 'TikTok account',
+      pinterest: 'Pinterest account',
+    };
+    if (connectedPlatform && platformNames[connectedPlatform]) {
+      setSuccessMessage(`${platformNames[connectedPlatform]} connected successfully!`);
       window.history.replaceState({}, '', window.location.pathname);
       setTimeout(() => setSuccessMessage(''), 5000);
     }
@@ -101,14 +103,25 @@ export default function AccountsPage() {
   }, []);
 
   const openConnect = (platformId: string) => {
-    // Facebook uses OAuth flow instead of manual token entry
+    // OAuth platforms redirect directly
     if (platformId === 'facebook') {
       window.location.href = '/api/auth/facebook';
       return;
     }
-    // YouTube uses Google OAuth flow
     if (platformId === 'youtube') {
       window.location.href = '/api/auth/youtube';
+      return;
+    }
+    if (platformId === 'linkedin') {
+      window.location.href = '/api/auth/linkedin';
+      return;
+    }
+    if (platformId === 'tiktok') {
+      window.location.href = '/api/auth/tiktok';
+      return;
+    }
+    if (platformId === 'pinterest') {
+      window.location.href = '/api/auth/pinterest';
       return;
     }
     setConnectModal(platformId);
@@ -313,14 +326,9 @@ export default function AccountsPage() {
                   <button
                     onClick={() => openConnect(p.id)}
                     disabled={loading}
-                    style={p.id === 'facebook'
-                      ? { background: '#1877F2', border: 'none', color: '#fff', borderRadius: '8px', padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }
-                      : p.id === 'youtube'
-                      ? { background: '#FF0000', border: 'none', color: '#fff', borderRadius: '8px', padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }
-                      : { background: accent, border: 'none', color: '#fff', borderRadius: '8px', padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }
-                    }
+                    style={{ background: ['facebook','youtube','linkedin','tiktok','pinterest'].includes(p.id) ? p.color : accent, border: 'none', color: '#fff', borderRadius: '8px', padding: '0.55rem 1.25rem', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}
                   >
-                    {p.id === 'facebook' ? 'Connect with Facebook' : p.id === 'youtube' ? 'Connect with YouTube' : 'Connect'}
+                    {['facebook','youtube','linkedin','tiktok','pinterest'].includes(p.id) ? `Connect with ${p.name.split(' ')[0]}` : 'Connect'}
                   </button>
                 )}
               </div>
@@ -329,28 +337,31 @@ export default function AccountsPage() {
         })}
       </div>
 
-      {/* Tier 2 */}
-      <h2 style={{ fontSize: '1rem', fontWeight: 700, color: muted, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        Coming Soon
-      </h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {tier2Platforms.map((p) => (
-          <div key={p.id} style={{ background: card, border: `1px solid ${border}`, borderRadius: '16px', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
-                {p.icon}
+      {tier2Platforms.length > 0 && (
+        <>
+          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: muted, marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Coming Soon
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {tier2Platforms.map((p) => (
+              <div key={p.id} style={{ background: card, border: `1px solid ${border}`, borderRadius: '16px', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>
+                    {p.icon}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, marginBottom: '0.2rem' }}>{p.name}</div>
+                    <div style={{ color: muted, fontSize: '0.85rem' }}>{p.desc}</div>
+                  </div>
+                </div>
+                <span style={{ background: 'rgba(148,163,184,0.15)', color: muted, borderRadius: '20px', padding: '0.35rem 0.9rem', fontSize: '0.8rem', fontWeight: 600 }}>
+                  Coming Soon
+                </span>
               </div>
-              <div>
-                <div style={{ fontWeight: 700, marginBottom: '0.2rem' }}>{p.name}</div>
-                <div style={{ color: muted, fontSize: '0.85rem' }}>{p.desc}</div>
-              </div>
-            </div>
-            <span style={{ background: 'rgba(148,163,184,0.15)', color: muted, borderRadius: '20px', padding: '0.35rem 0.9rem', fontSize: '0.8rem', fontWeight: 600 }}>
-              Coming Soon
-            </span>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
       {/* API Key Info Section */}
       <div style={{ marginTop: '2rem', background: 'rgba(16,185,129,0.06)', border: `1px solid rgba(16,185,129,0.15)`, borderRadius: '16px', padding: '1.5rem' }}>
@@ -381,6 +392,24 @@ export default function AccountsPage() {
             <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>X / Twitter</div>
             <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
               <strong style={{ color: text }}>API Key + API Secret + Bearer Token</strong> — Go to developer.x.com, create a project and app, copy your Bearer Token. API Key and Secret are configured in app settings for OAuth.
+            </div>
+          </div>
+          <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>LinkedIn</div>
+            <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
+              <strong style={{ color: accent }}>OAuth Connected</strong> — Click &quot;Connect with LinkedIn&quot; to authorize SocialPilot to post to your LinkedIn profile. Supports text posts and articles.
+            </div>
+          </div>
+          <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>TikTok</div>
+            <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
+              <strong style={{ color: accent }}>OAuth Connected</strong> — Click &quot;Connect with TikTok&quot; to authorize SocialPilot to upload videos to your TikTok account.
+            </div>
+          </div>
+          <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '1rem' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.35rem' }}>Pinterest</div>
+            <div style={{ color: muted, fontSize: '0.82rem', lineHeight: 1.6 }}>
+              <strong style={{ color: accent }}>OAuth Connected</strong> — Click &quot;Connect with Pinterest&quot; to authorize SocialPilot to create pins on your boards.
             </div>
           </div>
         </div>
