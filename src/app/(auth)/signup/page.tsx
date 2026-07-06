@@ -57,6 +57,7 @@ export default function SignupPage() {
         setLoading(false);
         return;
       }
+      fetch('/api/auth/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, platform: 'SocialPilot' }) }).catch(() => {})
       setConfirmationSent(true);
       setLoading(false);
     } catch {
