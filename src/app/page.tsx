@@ -49,8 +49,8 @@ export default function LandingPage() {
             { icon: '📸', name: 'Instagram', color: '#E1306C' },
             { icon: '▶️', name: 'YouTube', color: '#FF0000' },
             { icon: '🐦', name: 'X / Twitter', color: '#1DA1F2' },
-            { icon: '💼', name: 'LinkedIn', color: '#0A66C2', soon: true },
-            { icon: '🎵', name: 'TikTok', color: '#010101', soon: true },
+            { icon: '💼', name: 'LinkedIn', color: '#0A66C2' },
+            { icon: '🎵', name: 'TikTok', color: '#010101' },
             { icon: '📌', name: 'Pinterest', color: '#E60023', soon: true },
           ].map((p) => (
             <div key={p.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', opacity: p.soon ? 0.5 : 1 }}>
@@ -74,7 +74,7 @@ export default function LandingPage() {
             { icon: '💬', title: 'Smart Comment Inbox', desc: 'AI monitors and drafts replies to comments 24/7. Reply, flag, or hide from a single unified inbox.' },
             { icon: '📅', title: 'Visual Calendar', desc: 'Plan your content calendar weeks in advance. Month and week views with one-click scheduling.' },
             { icon: '📊', title: 'Analytics & Insights', desc: 'Track reach, engagement, and follower growth. See what time to post with the engagement heatmap.' },
-            { icon: '🔗', title: 'All Major Platforms', desc: 'Facebook, Instagram, YouTube, Twitter supported now. LinkedIn, TikTok, and Pinterest coming soon.' },
+            { icon: '🔗', title: 'All Major Platforms', desc: 'Facebook, Instagram, YouTube, LinkedIn, and TikTok supported now. Pinterest coming soon.' },
           ].map((f) => (
             <div key={f.title} style={{ background: card, border: `1px solid ${border}`, borderRadius: '16px', padding: '2rem' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{f.icon}</div>
