@@ -116,21 +116,24 @@ export default function LandingPage() {
               name: 'Free',
               price: '$0',
               period: 'forever',
-              features: ['2 connected accounts', '10 posts/month', 'Basic analytics', 'Comment inbox'],
+              trial: false,
+              features: ['2 connected accounts', '10 posts/month', 'Manual posting only', 'Basic analytics', 'Comment inbox (view only)', 'Single user'],
               highlight: false,
             },
             {
               name: 'Pro',
               price: '$29',
               period: '/month',
-              features: ['Unlimited posts', 'AI content generator', '5 connected accounts', 'Smart comment replies', 'Advanced analytics', 'Content calendar'],
+              trial: true,
+              features: ['5 connected accounts', 'Unlimited posts', 'AI content generator', 'Smart AI comment replies', 'Advanced analytics & insights', 'Content calendar & scheduling', 'Engagement heatmap', 'Multi-platform posting', 'Single user'],
               highlight: true,
             },
             {
               name: 'Agency',
-              price: '$149',
+              price: '$99',
               period: '/month',
-              features: ['15 connected accounts', 'Team collaboration', 'White-label reports', 'Priority support', 'Custom AI training', 'API access'],
+              trial: true,
+              features: ['20 connected accounts', 'Everything in Pro', 'Team collaboration & roles', 'White-label reports', 'Priority support', 'Custom AI training', 'API access', 'Multiple users', 'Custom pricing for 20+ accounts'],
               highlight: false,
             },
           ].map((plan) => (
@@ -149,7 +152,7 @@ export default function LandingPage() {
                 ))}
               </ul>
               <a href="/signup" style={{ display: 'block', background: plan.highlight ? '#fff' : accent, color: plan.highlight ? accent : '#fff', padding: '0.75rem', borderRadius: '8px', textDecoration: 'none', fontWeight: 700, fontSize: '0.95rem' }}>
-                Get Started
+                {plan.trial ? 'Start 7-Day Free Trial' : 'Get Started Free'}
               </a>
             </div>
           ))}

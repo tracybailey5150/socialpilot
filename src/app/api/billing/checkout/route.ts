@@ -10,7 +10,7 @@ function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVe
 
 const PLANS: Record<string, { name: string; price: number }> = {
   pro: { name: 'SocialPilot Pro', price: 2900 },
-  agency: { name: 'SocialPilot Agency', price: 14900 },
+  agency: { name: 'SocialPilot Agency', price: 9900 },
 };
 
 async function getAuthUser() {

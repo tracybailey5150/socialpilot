@@ -11,9 +11,9 @@ const accent = '#10B981';
 const muted = '#94A3B8';
 
 const PLANS = [
-  { key: 'free', name: 'Free', price: '$0', period: 'forever', features: ['2 accounts', '10 posts/month', 'Basic analytics', 'Comment inbox'] },
-  { key: 'pro', name: 'Pro', price: '$29', period: '/month', features: ['Unlimited posts', 'AI content generator', '5 accounts', 'Smart AI replies', 'Advanced analytics', 'Scheduling calendar'], popular: true },
-  { key: 'agency', name: 'Agency', price: '$149', period: '/month', features: ['15 accounts', 'Team collaboration', 'White-label reports', 'Priority support', 'Custom AI training', 'API access'] },
+  { key: 'free', name: 'Free', price: '$0', period: 'forever', features: ['2 accounts', '10 posts/month', 'Manual posting only', 'Basic analytics', 'Comment inbox (view only)', 'Single user'] },
+  { key: 'pro', name: 'Pro', price: '$29', period: '/month', features: ['5 accounts', 'Unlimited posts', 'AI content generator', 'Smart AI replies', 'Advanced analytics & insights', 'Content calendar & scheduling', 'Engagement heatmap', 'Multi-platform posting'], popular: true },
+  { key: 'agency', name: 'Agency', price: '$99', period: '/month', features: ['20 accounts', 'Everything in Pro', 'Team collaboration & roles', 'White-label reports', 'Priority support', 'Custom AI training', 'API access', 'Multiple users', '20+ accounts: custom pricing'] },
 ];
 
 const statusLabels: Record<string, { label: string; color: string }> = {
@@ -174,7 +174,7 @@ export default function SettingsPage() {
             <div>
               <div style={{ fontWeight: 700, marginBottom: '0.25rem', color: text }}>{plan.charAt(0).toUpperCase() + plan.slice(1)} Plan</div>
               <div style={{ color: muted, fontSize: '0.85rem' }}>
-                {plan === 'free' ? '2 accounts · 10 posts/mo' : plan === 'pro' ? 'Unlimited posts · 5 accounts' : '15 accounts · Team collaboration'}
+                {plan === 'free' ? '2 accounts · 10 posts/mo' : plan === 'pro' ? 'Unlimited posts · 5 accounts' : '20 accounts · Team collaboration'}
               </div>
             </div>
             {isPaid && (
@@ -203,7 +203,7 @@ export default function SettingsPage() {
                     <span style={{ fontSize: '0.8rem', color: muted }}>{p.period}</span>
                   </div>
                   <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1rem', fontSize: '0.8rem', color: muted }}>
-                    {p.features.slice(0, 4).map(f => (
+                    {p.features.map(f => (
                       <li key={f} style={{ padding: '0.2rem 0' }}>✓ {f}</li>
                     ))}
                   </ul>
