@@ -28,6 +28,7 @@ export default function SettingsPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [plan, setPlan] = useState('free');
+  const [role, setRole] = useState('');
   const [subscriptionStatus, setSubscriptionStatus] = useState('free');
   const [hasStripeCustomer, setHasStripeCustomer] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -56,13 +57,14 @@ export default function SettingsPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, plan, subscription_status, stripe_customer_id')
+        .select('full_name, plan, subscription_status, stripe_customer_id, role')
         .eq('id', user.id)
         .single();
 
       if (profile) {
         setName(profile.full_name ?? '');
         setPlan(profile.plan ?? 'free');
+        setRole(profile.role ?? '');
         setSubscriptionStatus(profile.subscription_status ?? 'free');
         setHasStripeCustomer(!!profile.stripe_customer_id);
       } else {
@@ -124,8 +126,9 @@ export default function SettingsPage() {
     setPortalLoading(false);
   };
 
-  const isPaid = ['active', 'trialing'].includes(subscriptionStatus);
-  const status = statusLabels[subscriptionStatus] || statusLabels.free;
+  const isOwner = role === 'owner' || plan === 'owner';
+  const isPaid = isOwner || ['active', 'trialing'].includes(subscriptionStatus);
+  const status = isOwner ? { label: 'Owner', color: accent } : (statusLabels[subscriptionStatus] || statusLabels.free);
 
   return (
     <div style={{ maxWidth: '700px' }}>
@@ -172,12 +175,12 @@ export default function SettingsPage() {
         <div style={{ padding: '1rem 1.25rem', background: bg, borderRadius: '10px', border: `1px solid ${isPaid ? 'rgba(16,185,129,0.3)' : border}`, marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <div style={{ fontWeight: 700, marginBottom: '0.25rem', color: text }}>{plan.charAt(0).toUpperCase() + plan.slice(1)} Plan</div>
+              <div style={{ fontWeight: 700, marginBottom: '0.25rem', color: text }}>{isOwner ? 'Owner' : plan.charAt(0).toUpperCase() + plan.slice(1)} Plan</div>
               <div style={{ color: muted, fontSize: '0.85rem' }}>
-                {plan === 'free' ? '2 accounts · 10 posts/mo' : plan === 'pro' ? 'Unlimited posts · 5 accounts' : '20 accounts · Team collaboration'}
+                {isOwner ? 'Unlimited everything · Platform owner' : plan === 'free' ? '2 accounts · 10 posts/mo' : plan === 'pro' ? 'Unlimited posts · 5 accounts' : '20 accounts · Team collaboration'}
               </div>
             </div>
-            {isPaid && (
+            {isPaid && !isOwner && (
               <button onClick={handleManageBilling} disabled={portalLoading} style={{ background: 'transparent', border: `1px solid ${border}`, color: muted, borderRadius: '8px', padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 600, cursor: portalLoading ? 'not-allowed' : 'pointer' }}>
                 {portalLoading ? 'Loading...' : 'Manage Billing'}
               </button>

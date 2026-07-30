@@ -30,13 +30,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
         router.push('/login');
       } else {
         setAuthChecked(true);
       }
     });
+    return () => { subscription.unsubscribe(); };
   }, [router]);
 
   useEffect(() => { setMenuOpen(false); }, [pathname]);
